@@ -4,12 +4,12 @@ if (process.env.NODE_ENV !== 'production') {
 
 const express = require('express')
 const app = express()
-const bcrypt = require('bcrypt')
+
 const passport = require('passport')
 const flash = require('express-flash')
 const session = require('express-session')
 const methodOverride = require('method-override')
-const mysql = require('mysql');
+const mysql = require('mysql2');
 const bodyparser = require('body-parser');
 const dotenv = require('dotenv');
 
@@ -17,10 +17,12 @@ var port = process.env.PORT || 5000;
 app.use(bodyparser.json());
 
 var mysqlConnection = mysql.createConnection({
-  host: 'localhost',
-  user: process.env.db_user_name,
-  password: process.env.db_password,
-  database: process.env.db_name
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQLDATABASE,
+  port: process.env.MYSQLPORT
+
 });
 
 mysqlConnection.connect((err) => {
@@ -30,24 +32,30 @@ mysqlConnection.connect((err) => {
     console.log('DB connection failed \n Error :' + JSON.stringify(err, undefined, 2));
 })
 
-const users = []
+const initializePassport = require('./passport-config')
 
-users.push({
-  id: Date.now().toString(),
+
+const ADMIN_ID = 'admin123';
+
+const staticUser = {
+  id: ADMIN_ID,
   name: 'Admin',
   email: process.env.login_id,
   password: process.env.login_password
-})
+};
 
-
-const initializePassport = require('./passport-config')
-const e = require('express')
 initializePassport(
-
   passport,
-  email => users.find(user => user.email === email),
-  id => users.find(user => user.id === id)
-)
+  email => {
+    if (email === staticUser.email) return staticUser;
+    return null;
+  },
+  id => {
+    if (id === staticUser.id) return staticUser;
+    return null;
+  }
+);
+
 
 
 app.use(express.static("public"))
